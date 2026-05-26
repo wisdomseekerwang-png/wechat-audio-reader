@@ -92,7 +92,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
     setAcctValue('')
   }
 
-  const typeLabel = (t: AccountSourceType) => t === 'biz' ? '__biz 直连' : '搜狗搜索'
+  const typeLabel = (t: AccountSourceType) => t === 'biz' ? '__biz 直连' : '微信搜索'
 
   return (
     <div>
@@ -104,7 +104,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 2fr 80px', gap: 12, alignItems: 'end' }}>
           <select value={sourceType} onChange={e => setSourceType(e.target.value as AccountSourceType)} style={S.select}>
             <option value="biz">__biz 直连</option>
-            <option value="sogou">搜狗搜索</option>
+            <option value="sogou">微信搜索</option>
           </select>
           <input
             placeholder="公众号名称"
@@ -114,7 +114,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
           />
           <input
-            placeholder={sourceType === 'biz' ? '粘贴 __biz 值 (从文章链接中提取)' : '输入公众号准确名称'}
+            placeholder={sourceType === 'biz' ? '粘贴 __biz 值 (从文章链接中提取)' : '输入公众号名称搜索'}
             value={acctValue}
             onChange={e => setAcctValue(e.target.value)}
             style={S.input}
@@ -125,7 +125,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
         <p style={{ fontSize:12, color:'#666', marginTop:8, marginBottom:0 }}>
           {sourceType === 'biz'
             ? '💡 __biz 获取方法: 打开任意一篇该公众号文章 → 点击右上角 ··· → 复制链接 → 链接中包含 __biz=xxx 参数'
-            : '💡 搜狗搜索: 输入公众号的准确名称，系统将通过搜狗微信搜索查找最新文章'}
+            : '💡 微信搜索: 输入公众号名称，通过搜狗微信搜索查找最新文章（自动获取Cookie、UA轮换）'}
         </p>
       </div>
 
@@ -146,7 +146,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
                     style={S.select}
                   >
                     <option value="biz">__biz 直连</option>
-                    <option value="sogou">搜狗搜索</option>
+                    <option value="sogou">微信搜索</option>
                   </select>
                   <input
                     value={acc.name}
