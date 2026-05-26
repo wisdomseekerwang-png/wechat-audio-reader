@@ -543,10 +543,124 @@ async function scanByBing(accountName: string, maxResults = 20): Promise<Article
   }))
 }
 
-// ========== Scan by Archive/Mirror Sites (direct homepage scraping) ==========
-// Inspired by fetch_articles_tts.py: maobidao.cn, fugay.com, etc.
+// ========== Date extraction from page content ==========
 
-const NAV_SKIP_KEYWORDS = [
+function extractDateFromUrl(url: string): string {
+  // Try URL patterns: /2026/05/25/ or ?date=2026-05-25
+  const patterns = [
+    /\/(\d{4})\/(\d{2})\/(\d{2})\//,
+    /\/(\d{4})-(\d{2})-(\d{2})/,
+    /[?&]date=(\d{4})-(\d{2})-(\d{2})/,
+    /\/(\d{4})(\d{2})(\d{2})\//,
+    /(\d{4})-(\d{2})-(\d{2})/,
+  ]
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m) {
+      const d = new Date(`${m[1]}-${m[2]}-${m[3]}T12:00:00+08:00`)
+      if (!isNaN(d.getTime())) return d.toISOString()
+    }
+  }
+  return ''
+}
+
+function extractDateFromText(text: string): string {
+  if (!text || text.length < 5) return ''
+
+  // ISO format: 2026-05-25
+  let m = text.match(/(\d{4})-(\d{2})-(\d{2})/)
+  if (m) {
+    const d = new Date(`${m[1]}-${m[2]}-${m[3]}T12:00:00+08:00`)
+    if (!isNaN(d.getTime())) return d.toISOString()
+  }
+
+  // Chinese format: 2026年5月25日 or 2026年05月25日
+  m = text.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/)
+  if (m) {
+    const d = new Date(`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}T12:00:00+08:00`)
+    if (!isNaN(d.getTime())) return d.toISOString()
+  }
+
+  // Slash format: 2026/5/25 or 2026/05/25
+  m = text.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/)
+  if (m) {
+    const d = new Date(`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}T12:00:00+08:00`)
+    if (!isNaN(d.getTime())) return d.toISOString()
+  }
+
+  // Dot format: 2026.5.25 or 2026.05.25
+  m = text.match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/)
+  if (m) {
+    const d = new Date(`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}T12:00:00+08:00`)
+    if (!isNaN(d.getTime())) return d.toISOString()
+  }
+
+  // Month-Day only (assume current year): 5月25日 or 05-25
+  m = text.match(/(\d{1,2})月(\d{1,2})日/)
+  if (m) {
+    const now = new Date()
+    const d = new Date(`${now.getFullYear()}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T12:00:00+08:00`)
+    if (!isNaN(d.getTime())) return d.toISOString()
+  }
+
+  // Relative time (Chinese)
+  return parseRelativeDate(text).datetime || ''
+}
+
+function extractDateFromArticlePage(html: string): string {
+  const $ = cheerio.load(html)
+
+  // Try meta tags first
+  const metaDate =
+    $('meta[property="article:published_time"]').attr('content') ||
+    $('meta[name="pubdate"]').attr('content') ||
+    $('meta[name="publishdate"]').attr('content') ||
+    $('meta[name="date"]').attr('content') ||
+    ''
+  if (metaDate) {
+    const d = new Date(metaDate)
+    if (!isNaN(d.getTime())) return d.toISOString()
+  }
+
+  // Try <time> element
+  const $time = $('time[datetime]').first()
+  if ($time.length > 0) {
+    const dt = $time.attr('datetime')
+    if (dt) {
+      const d = new Date(dt)
+      if (!isNaN(d.getTime())) return d.toISOString()
+    }
+  }
+
+  // Try class-based date elements
+  for (const cls of ['.date', '.time', '.post-date', '.publish-date', '.post-time', '.entry-date', '.article-date']) {
+    const text = $(cls).first().text().trim()
+    if (text) {
+      const date = extractDateFromText(text)
+      if (date) return date
+    }
+  }
+
+  // Try common text patterns near date labels
+  const bodyText = $('body').text()
+  const labelPatterns = [
+    /发布时间[：:]\s*([^\n]{5,30})/,
+    /发表时间[：:]\s*([^\n]{5,30})/,
+    /发布日期[：:]\s*([^\n]{5,30})/,
+    /Date[：:]\s*([^\n]{5,30})/,
+  ]
+  for (const p of labelPatterns) {
+    const m = bodyText.match(p)
+    if (m) {
+      const date = extractDateFromText(m[1])
+      if (date) return date
+    }
+  }
+
+  return ''
+}
+
+// ========== Parse Archive Homepage ==========
   '导航', '搜索', '首页', '登录', '注册', '评论', '回复', '发表评论',
   '上页', '下页', '目录', '下载', '关于', '联系', 'RSS', 'rss',
   'admin', 'login', 'logout', 'signin', 'signup', 'register',
@@ -573,6 +687,7 @@ interface ArchiveArticleLink {
   title: string
   url: string
   position: number // lower = higher on page = likely newer
+  dateHint: string // extracted date text or URL date, ISO string
 }
 
 function parseArchiveHomepage(html: string, homepageUrl: string, maxResults: number): ArchiveArticleLink[] {
@@ -605,7 +720,37 @@ function parseArchiveHomepage(html: string, homepageUrl: string, maxResults: num
     // Skip if it resolves back to the homepage itself
     if (url === homepageUrl || url === homepageUrl + '/') return
 
-    links.push({ title, url, position })
+    // Try to extract date from URL first
+    let dateHint = extractDateFromUrl(url)
+
+    // If not found in URL, check the link's parent and siblings for date text
+    if (!dateHint) {
+      // Check parent element text
+      const parentText = $el.parent().text().trim()
+      const cleanParent = parentText.replace(title, '').trim()
+      if (cleanParent.length >= 5) {
+        dateHint = extractDateFromText(cleanParent)
+      }
+    }
+
+    // Check adjacent <time>, <span class="date">, etc.
+    if (!dateHint) {
+      const $parent = $el.parent()
+      const $timeEl = $parent.find('time, .date, .time, .post-date, .publish-date, .post-time, .entry-date').first()
+      if ($timeEl.length > 0) {
+        dateHint = extractDateFromText($timeEl.text().trim())
+      }
+    }
+
+    // Check the element's own data attributes
+    if (!dateHint) {
+      const dataDate = $el.attr('data-date') || $el.attr('data-time') || ''
+      if (dataDate) {
+        dateHint = extractDateFromText(dataDate)
+      }
+    }
+
+    links.push({ title, url, position, dateHint })
     position++
   })
 
@@ -617,9 +762,16 @@ function parseArchiveHomepage(html: string, homepageUrl: string, maxResults: num
     return true
   })
 
-  // Sort by position (higher on page first) = likely newer
+  // Sort: articles with real dates first (sorted by date descending), then by position
   return unique
-    .sort((a, b) => a.position - b.position)
+    .sort((a, b) => {
+      if (a.dateHint && b.dateHint) {
+        return new Date(b.dateHint).getTime() - new Date(a.dateHint).getTime()
+      }
+      if (a.dateHint) return -1
+      if (b.dateHint) return 1
+      return a.position - b.position
+    })
     .slice(0, maxResults)
 }
 
@@ -637,8 +789,28 @@ async function scanByArchive(homepageUrl: string, maxResults = 10): Promise<Arti
   const articles: Article[] = []
   for (const link of links) {
     // Try to fetch article content from the archive page
-    const content = await fetchArchiveContent(link.url)
-    const now = new Date().toISOString()
+    const { content, dateHint: articleDateHint } = await fetchArchiveContent(link.url)
+
+    // Determine publish date:
+    // 1. Date from link context (parent/sibling/URL pattern from homepage)
+    // 2. Date from article page meta tags
+    // 3. Fallback: use position to estimate (newest = today, oldest = 7 days ago)
+    let publishDate = link.dateHint || articleDateHint
+
+    if (!publishDate && content) {
+      // Try extracting date from content text
+      const textDate = extractDateFromText(content.substring(0, 500))
+      if (textDate) publishDate = textDate
+    }
+
+    if (!publishDate) {
+      // Fallback: estimate based on position (0 = today, last = 7 days ago)
+      const totalLinks = links.length
+      const daysAgo = Math.min(Math.floor((link.position / Math.max(totalLinks, 1)) * 7), 7)
+      const estDate = new Date()
+      estDate.setDate(estDate.getDate() - daysAgo)
+      publishDate = estDate.toISOString()
+    }
 
     articles.push({
       id: genId(),
@@ -647,7 +819,7 @@ async function scanByArchive(homepageUrl: string, maxResults = 10): Promise<Arti
       url: link.url,
       summary: content ? content.substring(0, 200) : link.title,
       content: content || '',
-      publishDate: now,
+      publishDate,
       audioGenerated: false,
       audioGenerating: false,
       isRead: false,
@@ -659,6 +831,9 @@ async function scanByArchive(homepageUrl: string, maxResults = 10): Promise<Arti
       await sleep(300 + Math.random() * 500)
     }
   }
+
+  // Sort by date descending (real dates will be correct, estimated ones follow position order)
+  articles.sort((a, b) => new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime())
 
   return articles
 }
@@ -713,7 +888,10 @@ async function scanByArchiveDate(dateUrlPattern: string, accountName: string, ma
     if (!title || title.length < 2) continue
 
     // Fetch content from this archive page (not mp.weixin.qq.com)
-    const content = await fetchArchiveContent(url)
+    const { content, dateHint: articleDate } = await fetchArchiveContent(url)
+
+    // Prefer date from article page meta over URL-pattern date
+    const publishDate = articleDate || date.toISOString()
 
     articles.push({
       id: genId(),
@@ -722,7 +900,7 @@ async function scanByArchiveDate(dateUrlPattern: string, accountName: string, ma
       url,
       summary: content ? content.substring(0, 200) : title,
       content: content || '',
-      publishDate: date.toISOString(),
+      publishDate,
       audioGenerated: false,
       audioGenerating: false,
       isRead: false,
@@ -741,14 +919,17 @@ async function scanByArchiveDate(dateUrlPattern: string, accountName: string, ma
 // ========== Fetch content from an archive/mirror site article page ==========
 // Inspired by fetch_maobidao / fetch_fugay in fetch_articles_tts.py
 
-async function fetchArchiveContent(articleUrl: string): Promise<string> {
+async function fetchArchiveContent(articleUrl: string): Promise<{ content: string; dateHint: string }> {
   const html = await fetchText(articleUrl, {
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
   }, 20000)
 
-  if (!html) return ''
+  if (!html) return { content: '', dateHint: '' }
 
   const $ = cheerio.load(html)
+
+  // Try to extract date from the page
+  const dateHint = extractDateFromArticlePage(html)
 
   // Remove script, style, nav elements
   $('script, style, nav, footer, header, .sidebar, .comment, .nav').remove()
@@ -764,7 +945,7 @@ async function fetchArchiveContent(articleUrl: string): Promise<string> {
   })
 
   if (textParts.length > 0) {
-    return textParts.join('\n\n')
+    return { content: textParts.join('\n\n'), dateHint }
   }
 
   // Strategy 2: Extract <article> or <main> content
@@ -772,22 +953,21 @@ async function fetchArchiveContent(articleUrl: string): Promise<string> {
     .text()
     .trim()
   if (articleText.length > 100) {
-    return cleanHtml(articleText)
+    return { content: cleanHtml(articleText), dateHint }
   }
 
   // Strategy 3: Full page body text extraction
   const bodyText = $('body').text().trim()
   if (bodyText.length > 100) {
-    // Split into paragraphs by newlines and filter
     const lines = bodyText.split(/\n+/)
     const cleanLines = lines
       .map(l => l.trim())
       .filter(l => l.length > 15)
       .slice(0, 50)
-    return cleanLines.join('\n\n')
+    return { content: cleanLines.join('\n\n'), dateHint }
   }
 
-  return ''
+  return { content: '', dateHint }
 }
 
 // ========== Method 3: Fetch article content by URL ==========
