@@ -1109,7 +1109,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       allArticles.push(...articles)
     }
 
-    return res.json({ articles: allArticles })
+    // Filter out articles with empty content (Sogou/Bing often return no content)
+    const articlesWithContent = allArticles.filter(a => a.content && a.content.trim().length > 0)
+
+    return res.json({ articles: articlesWithContent })
   } catch (error: any) {
     console.error('Scan error:', error)
     return res.status(500).json({ error: error.message || 'Scan failed' })
