@@ -323,11 +323,11 @@ async function scanBySogou(accountName: string, maxResults = 20): Promise<Articl
   const results = (matched.length > 0 ? matched : allRaw)
     // Sort by date descending (newest first)
     .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
-    // Filter: only articles from last 30 days
+    // Filter: only articles from last 7 days
     .filter(a => {
       const d = new Date(a.datetime)
-      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-      return d.getTime() > thirtyDaysAgo
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+      return d.getTime() > sevenDaysAgo
     })
 
   if (results.length === 0) return []
@@ -522,9 +522,9 @@ async function scanByBing(accountName: string, maxResults = 20): Promise<Article
     new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
   )
 
-  // Filter: only articles from last 30 days
-  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-  const recent = sorted.filter(a => new Date(a.datetime).getTime() > thirtyDaysAgo)
+  // Filter: only articles from last 7 days
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+  const recent = sorted.filter(a => new Date(a.datetime).getTime() > sevenDaysAgo)
 
   if (recent.length === 0) return []
 
