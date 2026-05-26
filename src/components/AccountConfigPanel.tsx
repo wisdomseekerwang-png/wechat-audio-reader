@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { AccountConfig, AccountSourceType } from '../types'
+import type { AccountConfig } from '../types'
 
 interface Props {
   accounts: AccountConfig[]
@@ -27,17 +27,6 @@ const S = {
     fontSize: 14,
     outline: 'none',
     boxSizing: 'border-box' as const,
-  },
-  select: {
-    width: '100%',
-    padding: '10px 14px',
-    borderRadius: 8,
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'rgba(255,255,255,0.06)',
-    color: '#e0e0e0',
-    fontSize: 14,
-    outline: 'none',
-    cursor: 'pointer',
   },
   btnPrimary: {
     padding: '8px 20px',
@@ -74,29 +63,21 @@ function genId() {
 }
 
 const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDelete, onScan }) => {
-  const [sourceType, setSourceType] = useState<AccountSourceType>('sogou')
   const [acctName, setAcctName] = useState('')
-  const [acctValue, setAcctValue] = useState('')
+  const [archiveUrl, setArchiveUrl] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
 
   const handleAdd = () => {
-    if (!acctName.trim() || !acctValue.trim()) return
+    if (!acctName.trim()) return
     onSave({
       id: genId(),
       name: acctName.trim(),
-      sourceType,
-      value: acctValue.trim(),
+      value: acctName.trim(),
+      archiveUrl: archiveUrl.trim() || undefined,
       enabled: true,
     })
     setAcctName('')
-    setAcctValue('')
-  }
-
-  const typeLabel = (t: AccountSourceType) => {
-    if (t === 'sogou') return '微信搜索(搜狗)'
-    if (t === 'bing') return 'Bing搜索'
-    if (t === 'archive') return '存档站'
-    return '未知'
+    setArchiveUrl('')
   }
 
   return (
@@ -106,34 +87,25 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
       {/* Add account */}
       <div style={S.card}>
         <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>添加公众号</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 2fr 80px', gap: 12, alignItems: 'end' }}>
-          <select
-            value={sourceType}
-            onChange={e => setSourceType(e.target.value as AccountSourceType)}
-            style={S.select}
-          >
-            <option value="sogou">微信搜索(搜狗)</option>
-            <option value="bing">Bing搜索</option>
-            <option value="archive">存档站</option>
-          </select>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 12, alignItems: 'end' }}>
           <input
-            placeholder="公众号名称"
+            placeholder="公众号名称（如：刘备教授）"
             value={acctName}
             onChange={e => setAcctName(e.target.value)}
             style={S.input}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
           />
           <input
-            placeholder={sourceType === 'archive' ? '存档站首页URL' : '输入公众号名称搜索'}
-            value={acctValue}
-            onChange={e => setAcctValue(e.target.value)}
+            placeholder="存档站URL（选填，如有镜像站）"
+            value={archiveUrl}
+            onChange={e => setArchiveUrl(e.target.value)}
             style={S.input}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
           />
           <button onClick={handleAdd} style={S.btnPrimary}>添加</button>
         </div>
         <p style={{ fontSize:12, color:'#666', marginTop:8, marginBottom:0 }}>
-          💡 微信搜索(搜狗): 通过搜狗微信搜索 | Bing搜索: 通过Bing查找(mp.weixin.qq.com) | 存档站: 直接抓取公众号的镜像/存档站点首页。日期模式URL示例: https://www.fugay.com/{'{YYYY}'}/{'{MM}'}/{'{DD}'}-lbjs/
+          输入公众号名称即可，系统自动通过搜狗搜索，不足时补充Bing结果。如有该公众号的存档/镜像站点URL，填入可获取更完整文章。
         </p>
       </div>
 
@@ -147,27 +119,18 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
           <div key={acc.id} style={S.card}>
             {editing === acc.id ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 2fr', gap: 12 }}>
-                  <select
-                    value={acc.sourceType}
-                    onChange={e => onSave({ ...acc, sourceType: e.target.value as AccountSourceType })}
-                    style={S.select}
-                  >
-                    <option value="sogou">微信搜索(搜狗)</option>
-                    <option value="bing">Bing搜索</option>
-                    <option value="archive">存档站</option>
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <input
                     value={acc.name}
-                    onChange={e => onSave({ ...acc, name: e.target.value })}
+                    onChange={e => onSave({ ...acc, name: e.target.value, value: e.target.value })}
                     style={S.input}
                     placeholder="公众号名称"
                   />
                   <input
-                    value={acc.value}
-                    onChange={e => onSave({ ...acc, value: e.target.value })}
+                    value={acc.archiveUrl || ''}
+                    onChange={e => onSave({ ...acc, archiveUrl: e.target.value || undefined })}
                     style={S.input}
-                    placeholder="公众号名称"
+                    placeholder="存档站URL（选填）"
                   />
                 </div>
                 <button onClick={() => setEditing(null)} style={S.btnPrimary}>完成</button>
@@ -179,21 +142,21 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
                     <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
                       {acc.name}
                       <span style={S.tag(acc.enabled)}>{acc.enabled ? '已启用' : '已禁用'}</span>
-                      <span style={{
-                        ...S.tag(true),
-                        background: acc.sourceType === 'sogou'
-                          ? 'rgba(255,165,0,0.15)'
-                          : acc.sourceType === 'bing'
-                          ? 'rgba(0,150,255,0.15)'
-                          : 'rgba(80,200,120,0.15)',
-                        color: acc.sourceType === 'sogou' ? '#ffa500' : acc.sourceType === 'bing' ? '#0096ff' : '#4caf50',
-                      }}>
-                        {typeLabel(acc.sourceType)}
-                      </span>
+                      {acc.archiveUrl && (
+                        <span style={{
+                          ...S.tag(true),
+                          background: 'rgba(80,200,120,0.15)',
+                          color: '#4caf50',
+                        }}>
+                          有存档站
+                        </span>
+                      )}
                     </h3>
-                    <p style={{ fontSize: 13, color: '#888', marginBottom: 4, wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                      {acc.value}
-                    </p>
+                    {acc.archiveUrl && (
+                      <p style={{ fontSize: 12, color: '#888', marginBottom: 4, wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                        {acc.archiveUrl}
+                      </p>
+                    )}
                     {acc.lastScanAt && (
                       <p style={{ fontSize: 12, color: '#666' }}>
                         上次扫描: {new Date(acc.lastScanAt).toLocaleString('zh-CN')}

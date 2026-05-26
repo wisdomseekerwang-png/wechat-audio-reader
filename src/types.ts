@@ -1,4 +1,4 @@
-export type AccountSourceType = 'sogou' | 'bing' | 'archive'
+export type ArticleSourceType = 'sogou' | 'bing' | 'archive' | 'url'
 
 export interface Article {
   id: string
@@ -12,16 +12,17 @@ export interface Article {
   audioGenerated: boolean
   audioGenerating: boolean
   isRead: boolean
-  sourceType?: AccountSourceType | 'url'
+  /** Which source actually provided this article (for display only) */
+  sourceType?: ArticleSourceType
 }
 
 export interface AccountConfig {
   id: string
   name: string
-  /** Source type: 'sogou' = Sogou search, 'bing' = Bing search, 'archive' = archive/mirror site */
-  sourceType: AccountSourceType
-  /** Value: account name for search, or archive site URL for 'archive' type */
+  /** Account name for search (auto-tries sogou → bing) */
   value: string
+  /** Optional archive/mirror site URL for this account */
+  archiveUrl?: string
   enabled: boolean
   lastScanAt?: string
 }

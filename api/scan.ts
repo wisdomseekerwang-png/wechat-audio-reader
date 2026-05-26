@@ -5,8 +5,8 @@ import * as cheerio from 'cheerio'
 interface AccountConfig {
   id: string
   name: string
-  sourceType: 'sogou' | 'bing' | 'archive'
   value: string
+  archiveUrl?: string
   enabled: boolean
   lastScanAt?: string
 }
@@ -876,22 +876,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const allArticles: Article[] = []
 
     for (const account of accounts) {
-      if (!account.sourceType || !account.value) continue
+      if (!account.value) continue
 
       let articles: Article[] = []
 
-      if (account.sourceType === 'sogou') {
-        articles = await scanBySogou(account.value)
-      } else if (account.sourceType === 'bing') {
-        articles = await scanByBing(account.value)
-      } else if (account.sourceType === 'archive') {
-        // Auto-detect: date-pattern URL or homepage scraping
-        if (hasDatePlaceholders(account.value)) {
-          articles = await scanByArchiveDate(account.value, account.name)
-        } else {
-          articles = await scanByArchive(account.value)
+      // 1. Try Sogou first
+      articles = await scanBySogou(account.value)
+
+      // 2. If Sogou returned few results, supplement with Bing
+      if (articles.length < 5) {
+        const bingArticles = await scanByBing(account.value)
+        // Merge, deduplicate by URL
+        const existingUrls = new Set(articles.map(a => a.url))
+        for (const ba of bingArticles) {
+          if (!existingUrls.has(ba.url)) {
+            articles.push(ba)
+            existingUrls.add(ba.url)
+          }
         }
       }
+
+      // 3. If account has archiveUrl, also try archive scraping
+      if (account.archiveUrl) {
+        let archiveArticles: Article[] = []
+        if (hasDatePlaceholders(account.archiveUrl)) {
+          archiveArticles = await scanByArchiveDate(account.archiveUrl, account.name)
+        } else {
+          archiveArticles = await scanByArchive(account.archiveUrl)
+        }
+        // Merge archive results
+        const existingUrls = new Set(articles.map(a => a.url))
+        for (const aa of archiveArticles) {
+          if (!existingUrls.has(aa.url)) {
+            articles.push(aa)
+          }
+        }
+      }
+
+      // Sort all results by date descending
+      articles.sort((a, b) => new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime())
 
       // Override accountName with the configured name
       for (const a of articles) {
