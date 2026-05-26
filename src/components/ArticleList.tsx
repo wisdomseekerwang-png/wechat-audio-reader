@@ -11,6 +11,7 @@ interface Props {
   onGenerateAudio: (article: Article) => void
   onDeleteArticle: (id: string) => void
   onAddToQueue: (article: Article) => void
+  onArticleClick: (article: Article) => void
 }
 
 const S = {
@@ -66,7 +67,7 @@ const S = {
 
 const ArticleList: React.FC<Props> = ({
   articles, scanning, fetchingUrl, generatingIds,
-  onScan, onFetchArticle, onGenerateAudio, onDeleteArticle, onAddToQueue,
+  onScan, onFetchArticle, onGenerateAudio, onDeleteArticle, onAddToQueue, onArticleClick,
 }) => {
   const [pasteUrl, setPasteUrl] = useState('')
   const unreadCount = articles.filter(a => !a.isRead).length
@@ -147,7 +148,17 @@ const ArticleList: React.FC<Props> = ({
                       display: 'inline-block', flexShrink: 0,
                     }} />
                   )}
-                  <h3 style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4 }}>
+                  <h3
+                    onClick={() => onArticleClick(article)}
+                    style={{
+                      fontSize: 16, fontWeight: 600, lineHeight: 1.4,
+                      cursor: 'pointer', color: '#c0d0ff',
+                      transition: 'color 0.2s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#667eea')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#c0d0ff')}
+                    title="点击查看文章详情"
+                  >
                     {article.title}
                     {sourceLabel(article) && (
                       <span style={S.tag(sourceLabel(article)!.color)}>{sourceLabel(article)!.text}</span>

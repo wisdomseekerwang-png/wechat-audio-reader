@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
   const [message, setMessage] = useState('')
   const [fetchingUrl, setFetchingUrl] = useState(false)
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
 
   useEffect(() => {
     Store.loadState().then(setState)
@@ -127,6 +128,11 @@ const App: React.FC = () => {
       })
     }
   }, [showMessage])
+
+  // --- Article detail ---
+  const handleArticleClick = useCallback((article: Article) => {
+    setSelectedArticle(article)
+  }, [])
 
   // --- Fetch article by URL ---
   const handleFetchArticle = useCallback(async (articleUrl: string) => {
@@ -280,6 +286,7 @@ const App: React.FC = () => {
             onGenerateAudio={handleGenerateAudio}
             onDeleteArticle={handleDeleteArticle}
             onAddToQueue={handleAddToQueue}
+            onArticleClick={handleArticleClick}
           />
         )}
         {activeTab === 'accounts' && (
@@ -298,6 +305,146 @@ const App: React.FC = () => {
           />
         )}
       </main>
+
+      {/* Article Detail Modal */}
+      {selectedArticle && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 900,
+            background: 'rgba(0,0,0,0.7)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={() => setSelectedArticle(null)}
+        >
+          <div
+            style={{
+              background: '#1a1a3e', borderRadius: 16,
+              border: '1px solid rgba(255,255,255,0.12)',
+              maxWidth: 720, width: '100%', maxHeight: '85vh',
+              display: 'flex', flexDirection: 'column',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'flex-start', gap: 16,
+            }}>
+              <div style={{ flex: 1 }}>
+                <h2 style={{
+                  fontSize: 20, fontWeight: 700, lineHeight: 1.5,
+                  margin: '0 0 12px 0', color: '#e8e8f0',
+                }}>
+                  {selectedArticle.title}
+                </h2>
+                <div style={{ display: 'flex', gap: 16, fontSize: 13, color: '#888', flexWrap: 'wrap' }}>
+                  <span>📢 {selectedArticle.accountName}</span>
+                  <span>📅 {new Date(selectedArticle.publishDate).toLocaleDateString('zh-CN')}</span>
+                  <span>{selectedArticle.content.length} 字</span>
+                  {selectedArticle.audioGenerated && <span style={{ color: '#4caf50' }}>🎵 已生成音频</span>}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedArticle(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.08)', border: 'none',
+                  color: '#999', fontSize: 18, cursor: 'pointer',
+                  borderRadius: 8, width: 36, height: 36,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+                title="关闭"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{
+              padding: 24, overflowY: 'auto', flex: 1,
+              fontSize: 15, lineHeight: 1.9, color: '#c8c8d4',
+              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            }}>
+              {selectedArticle.content || selectedArticle.summary ? (
+                <p style={{ margin: 0 }}>
+                  {selectedArticle.content || selectedArticle.summary}
+                </p>
+              ) : (
+                <p style={{ color: '#666', fontStyle: 'italic', margin: 0 }}>
+                  （文章内容暂未获取，请从存档站扫描或粘贴链接获取完整内容）
+                </p>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center', flexWrap: 'wrap', gap: 12,
+            }}>
+              <a
+                href={selectedArticle.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: 13, color: '#667eea', textDecoration: 'none',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                🔗 查看原文
+              </a>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {!selectedArticle.audioGenerated && selectedArticle.content && (
+                  <button
+                    onClick={() => {
+                      handleGenerateAudio(selectedArticle)
+                      setSelectedArticle(null)
+                    }}
+                    style={{
+                      padding: '8px 18px', borderRadius: 8, border: 'none',
+                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                      color: '#fff', cursor: 'pointer', fontSize: 14,
+                    }}
+                  >
+                    🎙 生成音频
+                  </button>
+                )}
+                {selectedArticle.audioGenerated && (
+                  <button
+                    onClick={() => {
+                      handleAddToQueue(selectedArticle)
+                      setSelectedArticle(null)
+                    }}
+                    style={{
+                      padding: '8px 18px', borderRadius: 8, border: 'none',
+                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                      color: '#fff', cursor: 'pointer', fontSize: 14,
+                    }}
+                  >
+                    ➕ 加入播放
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedArticle(null)}
+                  style={{
+                    padding: '8px 18px', borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: '#999', cursor: 'pointer', fontSize: 14,
+                  }}
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Audio Player */}
       <AudioPlayer
