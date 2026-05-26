@@ -74,7 +74,7 @@ function genId() {
 }
 
 const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDelete, onScan }) => {
-  const [sourceType, setSourceType] = useState<AccountSourceType>('biz')
+  const [sourceType, setSourceType] = useState<AccountSourceType>('sogou')
   const [acctName, setAcctName] = useState('')
   const [acctValue, setAcctValue] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
@@ -92,7 +92,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
     setAcctValue('')
   }
 
-  const typeLabel = (t: AccountSourceType) => t === 'biz' ? '__biz 直连' : '微信搜索'
+  const typeLabel = (_t: AccountSourceType) => '微信搜索'
 
   return (
     <div>
@@ -101,11 +101,8 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
       {/* Add account */}
       <div style={S.card}>
         <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>添加公众号</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 2fr 80px', gap: 12, alignItems: 'end' }}>
-          <select value={sourceType} onChange={e => setSourceType(e.target.value as AccountSourceType)} style={S.select}>
-            <option value="biz">__biz 直连</option>
-            <option value="sogou">微信搜索</option>
-          </select>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 80px', gap: 12, alignItems: 'end' }}>
+          <input type="hidden" value="sogou" />
           <input
             placeholder="公众号名称"
             value={acctName}
@@ -114,7 +111,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
           />
           <input
-            placeholder={sourceType === 'biz' ? '粘贴 __biz 值 (从文章链接中提取)' : '输入公众号名称搜索'}
+            placeholder="输入公众号名称搜索"
             value={acctValue}
             onChange={e => setAcctValue(e.target.value)}
             style={S.input}
@@ -123,9 +120,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
           <button onClick={handleAdd} style={S.btnPrimary}>添加</button>
         </div>
         <p style={{ fontSize:12, color:'#666', marginTop:8, marginBottom:0 }}>
-          {sourceType === 'biz'
-            ? '💡 __biz 获取方法（推荐⭐）: 打开任意一篇该公众号文章 → 复制链接 → 提取 __biz=xxx 参数。微信官方接口，文章按时间倒序，最新最全'
-            : '💡 微信搜索: 通过搜狗搜索查找（仅显示近30天文章，按时间倒序）。⚠️ 搜狗搜索可能不够及时，推荐优先使用 __biz 直连'}
+          💡 微信搜索: 通过搜狗微信搜索查找（仅显示近30天文章，按时间倒序）。也可直接在文章列表页粘贴链接快速添加
         </p>
       </div>
 
@@ -139,15 +134,8 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
           <div key={acc.id} style={S.card}>
             {editing === acc.id ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 2fr', gap: 12 }}>
-                  <select
-                    value={acc.sourceType}
-                    onChange={e => onSave({ ...acc, sourceType: e.target.value as AccountSourceType })}
-                    style={S.select}
-                  >
-                    <option value="biz">__biz 直连</option>
-                    <option value="sogou">微信搜索</option>
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
+                  <input type="hidden" value="sogou" />
                   <input
                     value={acc.name}
                     onChange={e => onSave({ ...acc, name: e.target.value })}
@@ -158,7 +146,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
                     value={acc.value}
                     onChange={e => onSave({ ...acc, value: e.target.value })}
                     style={S.input}
-                    placeholder={acc.sourceType === 'biz' ? '__biz 值' : '公众号名称'}
+                    placeholder="公众号名称"
                   />
                 </div>
                 <button onClick={() => setEditing(null)} style={S.btnPrimary}>完成</button>
@@ -170,7 +158,7 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
                     <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
                       {acc.name}
                       <span style={S.tag(acc.enabled)}>{acc.enabled ? '已启用' : '已禁用'}</span>
-                      <span style={{ ...S.tag(true), background: acc.sourceType === 'biz' ? 'rgba(102,126,234,0.15)' : 'rgba(255,165,0,0.15)', color: acc.sourceType === 'biz' ? '#667eea' : '#ffa500' }}>
+                      <span style={{ ...S.tag(true), background: 'rgba(255,165,0,0.15)', color: '#ffa500' }}>
                         {typeLabel(acc.sourceType)}
                       </span>
                     </h3>

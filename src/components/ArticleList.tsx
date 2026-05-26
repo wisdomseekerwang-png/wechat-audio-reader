@@ -83,7 +83,6 @@ const ArticleList: React.FC<Props> = ({
 
   const sourceLabel = (a: Article) => {
     if (a.sourceType === 'url') return { text: '链接', color: '0,200,200' }
-    if (a.sourceType === 'biz') return { text: '直连', color: '102,126,234' }
     if (a.sourceType === 'sogou') return { text: '微信搜索', color: '255,165,0' }
     return null
   }

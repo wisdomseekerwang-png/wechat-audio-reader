@@ -5,7 +5,7 @@ import * as cheerio from 'cheerio'
 interface AccountConfig {
   id: string
   name: string
-  sourceType: 'biz' | 'sogou'
+  sourceType: 'sogou'
   value: string
   enabled: boolean
   lastScanAt?: string
@@ -136,49 +136,7 @@ async function getSogouCookie(): Promise<SogouCookie> {
   }
 }
 
-// ========== Method 1: Scan by __biz (WeChat API) ==========
-
-interface WechatArticleItem {
-  title: string
-  link: string
-  create_time: number
-  digest: string
-  content_url: string
-}
-
-async function scanByBiz(biz: string): Promise<Article[]> {
-  const url = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${encodeURIComponent(biz)}&scene=124&devicetype=android-30&version=28003333&lang=zh_CN&nettype=WIFI&a8scene=3&pass_ticket=&wx_header=3`
-  const html = await fetchText(url)
-  if (!html) return []
-
-  const msgMatch = html.match(/var\s+msgList\s*=\s*'({[\s\S]*?})'/)
-  if (!msgMatch) return []
-
-  try {
-    const msgData = JSON.parse(msgMatch[1].replace(/&quot;/g, '"'))
-    const list: WechatArticleItem[] = msgData.list || []
-
-    return list
-      .filter(item => item.title && item.link)
-      .map(item => ({
-        id: genId(),
-        accountName: extractMatch(html, /var\s+nickname\s*=\s*['"]([^'"]+)['"]/) || '',
-        title: cleanHtml(item.title),
-        url: item.link,
-        summary: cleanHtml(item.digest || '').substring(0, 200),
-        content: '',
-        publishDate: new Date((item.create_time || 0) * 1000).toISOString(),
-        audioGenerated: false,
-        audioGenerating: false,
-        isRead: false,
-        sourceType: 'biz',
-      }))
-  } catch {
-    return []
-  }
-}
-
-// ========== Method 2: Scan by Sogou search (wechat-article-search skill) ==========
+// ========== Scan by Sogou search (wechat-article-search skill) ==========
 
 function formatChinaDateTime(date: Date): string {
   return date.toISOString()
@@ -469,9 +427,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let articles: Article[] = []
 
-      if (account.sourceType === 'biz') {
-        articles = await scanByBiz(account.value)
-      } else if (account.sourceType === 'sogou') {
+      if (account.sourceType === 'sogou') {
         articles = await scanBySogou(account.value)
       }
 

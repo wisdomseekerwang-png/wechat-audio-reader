@@ -1,4 +1,4 @@
-export type AccountSourceType = 'biz' | 'sogou'
+export type AccountSourceType = 'sogou'
 
 export interface Article {
   id: string
@@ -18,9 +18,9 @@ export interface Article {
 export interface AccountConfig {
   id: string
   name: string
-  /** Source type: 'biz' = direct WeChat __biz, 'sogou' = search by name */
+  /** Source type: 'sogou' = search by name */
   sourceType: AccountSourceType
-  /** Value: __biz for 'biz' type, account name for 'sogou' type */
+  /** Value: account name for search */
   value: string
   enabled: boolean
   lastScanAt?: string
