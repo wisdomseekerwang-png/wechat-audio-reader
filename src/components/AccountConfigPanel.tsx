@@ -7,6 +7,7 @@ interface Props {
   onSave: (account: AccountConfig) => void
   onDelete: (id: string) => void
   onScan: (account: AccountConfig) => void
+  onScanAll: () => void
 }
 
 const S = {
@@ -62,7 +63,7 @@ function genId() {
   return `acc_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
 }
 
-const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDelete, onScan }) => {
+const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDelete, onScan, onScanAll }) => {
   const [acctName, setAcctName] = useState('')
   const [archiveUrl, setArchiveUrl] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
@@ -82,7 +83,18 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
 
   return (
     <div>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>公众号管理</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>公众号管理</h2>
+        {accounts.length > 0 && (
+          <button
+            onClick={onScanAll}
+            disabled={scanning}
+            style={{ ...S.btnPrimary, opacity: scanning ? 0.5 : 1 }}
+          >
+            {scanning ? '🔄 扫描中...' : '🔍 扫描全部'}
+          </button>
+        )}
+      </div>
 
       {/* Add account */}
       <div style={S.card}>

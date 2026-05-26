@@ -296,6 +296,7 @@ const App: React.FC = () => {
             onSave={handleSaveAccount}
             onDelete={handleDeleteAccount}
             onScan={handleScan}
+            onScanAll={() => handleScan()}
           />
         )}
         {activeTab === 'settings' && (
