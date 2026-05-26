@@ -1,3 +1,5 @@
+export type AccountSourceType = 'biz' | 'sogou'
+
 export interface Article {
   id: string
   accountName: string
@@ -10,12 +12,16 @@ export interface Article {
   audioGenerated: boolean
   audioGenerating: boolean
   isRead: boolean
+  sourceType?: AccountSourceType | 'url'
 }
 
 export interface AccountConfig {
   id: string
   name: string
-  url: string
+  /** Source type: 'biz' = direct WeChat __biz, 'sogou' = search by name */
+  sourceType: AccountSourceType
+  /** Value: __biz for 'biz' type, account name for 'sogou' type */
+  value: string
   enabled: boolean
   lastScanAt?: string
 }

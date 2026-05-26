@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [scanning, setScanning] = useState(false)
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
   const [message, setMessage] = useState('')
+  const [fetchingUrl, setFetchingUrl] = useState(false)
 
   useEffect(() => {
     Store.loadState().then(setState)
@@ -126,6 +127,30 @@ const App: React.FC = () => {
       })
     }
   }, [showMessage])
+
+  // --- Fetch article by URL ---
+  const handleFetchArticle = useCallback(async (articleUrl: string) => {
+    setFetchingUrl(true)
+    try {
+      const article = await API.fetchArticleByUrl(articleUrl)
+      // Deduplicate
+      const existing = state.articles.find(a => a.url === article.url)
+      if (existing) {
+        showMessage('该文章已存在')
+        return
+      }
+      await Store.saveArticles([article])
+      setState(prev => ({
+        ...prev,
+        articles: [article, ...prev.articles],
+      }))
+      showMessage(`已获取: ${article.title}`)
+    } catch (e: any) {
+      showMessage(`获取失败: ${e.message}`)
+    } finally {
+      setFetchingUrl(false)
+    }
+  }, [state.articles, showMessage])
 
   const handleDeleteArticle = useCallback(async (id: string) => {
     await Store.deleteArticle(id)
@@ -248,8 +273,10 @@ const App: React.FC = () => {
           <ArticleList
             articles={state.articles}
             scanning={scanning}
+            fetchingUrl={fetchingUrl}
             generatingIds={generatingIds}
             onScan={() => handleScan()}
+            onFetchArticle={handleFetchArticle}
             onGenerateAudio={handleGenerateAudio}
             onDeleteArticle={handleDeleteArticle}
             onAddToQueue={handleAddToQueue}

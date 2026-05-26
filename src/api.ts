@@ -20,15 +20,6 @@ export async function scanAccount(account: AccountConfig): Promise<Article[]> {
   return result.articles
 }
 
-export async function generateAudio(articleId: string, text: string): Promise<{ audioUrl: string }> {
-  const result = await fetcher<{ audioUrl: string }>('/generate-audio', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ articleId, text }),
-  })
-  return result
-}
-
 export async function scanAllAccounts(accounts: AccountConfig[]): Promise<Article[]> {
   const result = await fetcher<{ articles: Article[] }>('/scan', {
     method: 'POST',
@@ -36,4 +27,20 @@ export async function scanAllAccounts(accounts: AccountConfig[]): Promise<Articl
     body: JSON.stringify({ accounts }),
   })
   return result.articles
+}
+
+export async function fetchArticleByUrl(articleUrl: string): Promise<Article> {
+  const result = await fetcher<{ article: Article }>(
+    `/scan?mode=fetch&url=${encodeURIComponent(articleUrl)}`
+  )
+  return result.article
+}
+
+export async function generateAudio(articleId: string, text: string): Promise<{ audioUrl: string }> {
+  const result = await fetcher<{ audioUrl: string }>('/generate-audio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ articleId, text }),
+  })
+  return result
 }
