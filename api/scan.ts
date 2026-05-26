@@ -1112,16 +1112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Filter out articles with empty content (Sogou/Bing often return no content)
     const articlesWithContent = allArticles.filter(a => a.content && a.content.trim().length > 0)
 
-    // Filter out blocked domains (env: BLOCKED_DOMAINS, comma-separated)
-    const blockedDomains = (process.env.BLOCKED_DOMAINS || '')
-      .split(',')
-      .map(d => d.trim())
-      .filter(Boolean)
-    const finalArticles = blockedDomains.length > 0
-      ? articlesWithContent.filter(a => !blockedDomains.some(d => a.url.includes(d)))
-      : articlesWithContent
-
-    return res.json({ articles: finalArticles })
+    return res.json({ articles: articlesWithContent })
   } catch (error: any) {
     console.error('Scan error:', error)
     return res.status(500).json({ error: error.message || 'Scan failed' })
