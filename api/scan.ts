@@ -660,7 +660,12 @@ function extractDateFromArticlePage(html: string): string {
   return ''
 }
 
+// ========== Scan by Archive/Mirror Sites (direct homepage scraping) ==========
+// Inspired by fetch_articles_tts.py: maobidao.cn, fugay.com, etc.
+
 // ========== Parse Archive Homepage ==========
+
+const NAV_SKIP_KEYWORDS = [
   '导航', '搜索', '首页', '登录', '注册', '评论', '回复', '发表评论',
   '上页', '下页', '目录', '下载', '关于', '联系', 'RSS', 'rss',
   'admin', 'login', 'logout', 'signin', 'signup', 'register',
