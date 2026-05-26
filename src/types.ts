@@ -1,4 +1,4 @@
-export type AccountSourceType = 'sogou'
+export type AccountSourceType = 'sogou' | 'bing' | 'archive'
 
 export interface Article {
   id: string
@@ -18,9 +18,9 @@ export interface Article {
 export interface AccountConfig {
   id: string
   name: string
-  /** Source type: 'sogou' = search by name */
+  /** Source type: 'sogou' = Sogou search, 'bing' = Bing search, 'archive' = archive/mirror site */
   sourceType: AccountSourceType
-  /** Value: account name for search */
+  /** Value: account name for search, or archive site URL for 'archive' type */
   value: string
   enabled: boolean
   lastScanAt?: string
