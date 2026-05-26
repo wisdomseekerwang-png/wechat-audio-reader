@@ -322,13 +322,14 @@ async function scanBySogou(accountName: string, maxResults = 20): Promise<Articl
 
   while (allRaw.length < maxResults && page <= maxPages) {
     const encodedQuery = encodeURIComponent(accountName)
-    const searchUrl = `https://weixin.sogou.com/weixin?query=${encodedQuery}&s_from=input&_sug_=n&type=2&page=${page}&ie=utf8`
+    // tsn=3 requests newest-first ordering from Sogou
+    const searchUrl = `https://weixin.sogou.com/weixin?query=${encodedQuery}&_sug_=n&_sug_type_=&type=2&page=${page}&ie=utf8&tsn=3`
 
     const html = await fetchText(searchUrl, {
       'Cookie': cookieStr,
       'Host': 'weixin.sogou.com',
       'Referer': 'https://weixin.sogou.com/',
-      'Accept-Encoding': 'identity', // prevent gzip to avoid decode issues
+      'Accept-Encoding': 'identity',
     }, 20000)
 
     if (!html) break
@@ -341,18 +342,27 @@ async function scanBySogou(accountName: string, maxResults = 20): Promise<Articl
     page++
 
     if (page <= maxPages) {
-      await sleep(500 + Math.random() * 1000)
+      await sleep(800 + Math.random() * 1200)
     }
   }
 
   // Filter to articles where source matches accountName (fuzzy)
   const matched = allRaw.filter(a => {
-    if (!a.source) return true // if no source info, include it
+    if (!a.source) return false
     return a.source.includes(accountName) || accountName.includes(a.source)
   })
 
-  // If no exact match, return all results (account might not have source field)
-  const results = matched.length > 0 ? matched : allRaw
+  const results = (matched.length > 0 ? matched : allRaw)
+    // Sort by date descending (newest first)
+    .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
+    // Filter: only articles from last 30 days
+    .filter(a => {
+      const d = new Date(a.datetime)
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+      return d.getTime() > thirtyDaysAgo
+    })
+
+  if (results.length === 0) return []
 
   return results.slice(0, maxResults).map(raw => ({
     id: genId(),

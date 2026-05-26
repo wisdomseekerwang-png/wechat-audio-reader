@@ -124,8 +124,8 @@ const AccountConfigPanel: React.FC<Props> = ({ accounts, scanning, onSave, onDel
         </div>
         <p style={{ fontSize:12, color:'#666', marginTop:8, marginBottom:0 }}>
           {sourceType === 'biz'
-            ? '💡 __biz 获取方法: 打开任意一篇该公众号文章 → 点击右上角 ··· → 复制链接 → 链接中包含 __biz=xxx 参数'
-            : '💡 微信搜索: 输入公众号名称，通过搜狗微信搜索查找最新文章（自动获取Cookie、UA轮换）'}
+            ? '💡 __biz 获取方法（推荐⭐）: 打开任意一篇该公众号文章 → 复制链接 → 提取 __biz=xxx 参数。微信官方接口，文章按时间倒序，最新最全'
+            : '💡 微信搜索: 通过搜狗搜索查找（仅显示近30天文章，按时间倒序）。⚠️ 搜狗搜索可能不够及时，推荐优先使用 __biz 直连'}
         </p>
       </div>
 
