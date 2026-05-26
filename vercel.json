@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/**/*.ts": {
+      "memory": 512,
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/scan",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}
